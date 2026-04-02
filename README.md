@@ -23,3 +23,7 @@ Production-grade Blood Donation Management System frontend built with React + Vi
 
 ## API Base URL
 Set `VITE_API_BASE_URL` to your Spring Boot backend endpoint, e.g. `http://localhost:8080/api`.
+
+## Vercel Deployment
+This app uses React Router with `BrowserRouter`, so Vercel must rewrite all routes to `index.html`.
+The included `vercel.json` handles direct links like `/login` and `/register`.
