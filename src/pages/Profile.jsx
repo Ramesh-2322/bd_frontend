@@ -1,105 +1,86 @@
-﻿import React, { useEffect, useState } from 'react';
-import { api } from '../api/client.js';
+﻿import { useEffect } from "react";
+import AvailabilityToggle from "../components/AvailabilityToggle";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { useAuthStore } from "../store/authStore";
 
-export default function Profile() {
-  const [profile, setProfile] = useState(null);
-  const [status, setStatus] = useState('');
-  const [form, setForm] = useState({
-    email: '',
-    phone: '',
-    state: '',
-    city: '',
-    address: ''
-  });
-  const [image, setImage] = useState(null);
-
-  const loadProfile = () => {
-    api.get('/profile')
-      .then((res) => {
-        setProfile(res.data);
-        setForm({
-          email: res.data.email || '',
-          phone: res.data.phone || '',
-          state: res.data.state || '',
-          city: res.data.city || '',
-          address: res.data.address || ''
-        });
-      })
-      .catch(() => setProfile(null));
-  };
+function Profile() {
+  const user = useAuthStore((state) => state.user);
+  const refreshProfile = useAuthStore((state) => state.refreshProfile);
+  const toggleAvailability = useAuthStore((state) => state.toggleAvailability);
 
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const onChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const onSave = async (e) => {
-    e.preventDefault();
-    setStatus('');
-    try {
-      const data = new FormData();
-      Object.entries(form).forEach(([key, value]) => data.append(key, value));
-      if (image) data.append('image', image);
-      const res = await api.put('/profile', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setProfile(res.data);
-      setStatus('Profile updated.');
-    } catch (err) {
-      setStatus('Update failed.');
+    if (!user) {
+      refreshProfile();
     }
-  };
+  }, [refreshProfile, user]);
 
-  const toggleReady = async () => {
-    try {
-      const res = await api.post('/profile/toggle-ready');
-      setProfile(res.data);
-    } catch (err) {
-      setStatus('Unable to change status.');
-    }
-  };
-
-  if (!profile) {
-    return (
-      <section className="page">
-        <p>Loading profile...</p>
-      </section>
-    );
+  if (!user) {
+    return <LoadingSpinner text="Loading profile" />;
   }
 
+  const role = (user.role || localStorage.getItem("bdms_role") || "DONOR").toUpperCase();
+  const isDonor = role === "DONOR";
+  const isAvailable = Boolean(user.availabilityStatus ?? user.available);
+
   return (
-    <section className="page">
-      <div className="page-header">
-        <h1>Donor profile</h1>
-        <p>Manage your availability and contact details.</p>
+    <section className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
+      <div className="card p-6">
+        <h1 className="text-2xl font-bold text-medical-800 dark:text-medical-300">Profile</h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Manage your account details and preferences.</p>
       </div>
-      <div className="profile-grid">
-        <div className="profile-card">
-          <div className="card-badge">{profile.bloodGroup}</div>
-          <h2>{profile.firstName} {profile.lastName}</h2>
-          <p>{profile.city}, {profile.state}</p>
-          <p className={profile.readyToDonate ? 'status ready' : 'status pending'}>
-            {profile.readyToDonate ? 'Ready to donate' : 'Not available'}
-          </p>
-          <button className="button ghost" onClick={toggleReady} type="button">Toggle availability</button>
-          {profile.imageUrl && (
-            <img className="donor-photo" src={`http://localhost:8080${profile.imageUrl}`} alt="Donor" />
-          )}
-        </div>
-        <form className="form-grid" onSubmit={onSave}>
-          <input name="email" placeholder="Email" value={form.email} onChange={onChange} />
-          <input name="phone" placeholder="Phone" value={form.phone} onChange={onChange} />
-          <input name="state" placeholder="State" value={form.state} onChange={onChange} />
-          <input name="city" placeholder="City" value={form.city} onChange={onChange} />
-          <input name="address" placeholder="Address" value={form.address} onChange={onChange} />
-          <input type="file" onChange={(e) => setImage(e.target.files[0])} />
-          <button className="button primary" type="submit">Save changes</button>
-        </form>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <article className="card p-6 lg:col-span-2">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Personal Details</p>
+          <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">{user.fullName || user.name || "User"}</h2>
+
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <ProfileField label="Email" value={user.email || "N/A"} />
+            <ProfileField label="Phone" value={user.phone || user.phoneNumber || "N/A"} />
+            <ProfileField label="Role" value={role} />
+            <ProfileField label="Blood Group" value={user.bloodGroup || "N/A"} />
+            <ProfileField label="Location" value={user.location || user.city || "N/A"} />
+            <ProfileField label="Hospital" value={user.hospitalName || localStorage.getItem("bdms_hospital_name") || "N/A"} />
+          </dl>
+        </article>
+
+        <article className="card p-6">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Activity</p>
+          <div className="mt-4 space-y-4 text-sm">
+            <div>
+              <p className="text-slate-500">Total Donations</p>
+              <p className="text-lg font-semibold text-medical-700">{user.totalDonations ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-slate-500">Last Donation</p>
+              <p className="text-lg font-semibold text-slate-800 dark:text-slate-100">{user.lastDonationDate || "N/A"}</p>
+            </div>
+
+            {isDonor && (
+              <div className="rounded-xl border border-medical-100 bg-medical-50 p-4">
+                <p className="text-sm font-medium text-slate-700">Availability</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <AvailabilityToggle available={isAvailable} onToggle={toggleAvailability} />
+                  <span className="text-sm font-semibold text-medical-800">
+                    {isAvailable ? "Available" : "Not Available"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </article>
       </div>
-      {status && <p className="status-message">{status}</p>}
     </section>
   );
 }
+
+function ProfileField({ label, value }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{value}</dd>
+    </div>
+  );
+}
+
+export default Profile;

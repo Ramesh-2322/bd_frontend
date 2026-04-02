@@ -1,11 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { bdmsService } from "../services/bdmsService";
+import EmptyState from "../components/EmptyState";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { reportService } from "../services/reportService";
 
 function UploadReports() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [loadingList, setLoadingList] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  useEffect(() => {
+    const loadReports = async () => {
+      setLoadingList(true);
+      try {
+        const data = await reportService.getMyReports();
+        setUploadedFiles(data || []);
+      } catch {
+        setUploadedFiles([]);
+      } finally {
+        setLoadingList(false);
+      }
+    };
+
+    loadReports();
+  }, []);
+
 
   const isImage = useMemo(() => (selectedFile?.type || "").startsWith("image/"), [selectedFile]);
 
@@ -23,7 +42,7 @@ function UploadReports() {
 
     setUploading(true);
     try {
-      const response = await bdmsService.uploadReport(selectedFile);
+      const response = await reportService.uploadReport(selectedFile);
       setUploadedFiles((prev) => [
         {
           id: response?.id || `${selectedFile.name}-${Date.now()}`,
@@ -69,8 +88,12 @@ function UploadReports() {
           <div>
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Uploaded Files</h2>
             <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-medical-100 dark:border-slate-800">
-              {uploadedFiles.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-slate-500">No files uploaded yet.</p>
+              {loadingList ? (
+                <LoadingSpinner text="Loading uploaded files" />
+              ) : uploadedFiles.length === 0 ? (
+                <div className="p-3">
+                  <EmptyState title="No files uploaded" description="Uploaded reports will appear here." />
+                </div>
               ) : (
                 <ul className="divide-y divide-medical-100 dark:divide-slate-800">
                   {uploadedFiles.map((file) => (

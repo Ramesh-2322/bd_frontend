@@ -1,5 +1,6 @@
 import AdminDashboardPage from "./AdminDashboardPage";
 import DashboardPage from "./DashboardPage";
+import HospitalDashboardPage from "./HospitalDashboardPage";
 import SuperAdminDashboardPage from "./SuperAdminDashboardPage";
 import { useAuthStore } from "../store/authStore";
 
@@ -12,6 +13,10 @@ function RoleDashboardPage() {
 
   if (role === "ADMIN") {
     return <AdminDashboardPage />;
+  }
+
+  if (role === "HOSPITAL") {
+    return <HospitalDashboardPage />;
   }
 
   return <DashboardPage />;

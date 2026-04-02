@@ -1,4 +1,5 @@
 import axios from "axios";
+import toast from "react-hot-toast";
 import { logger } from "./logger";
 
 const API_BASE_URL = (
@@ -30,6 +31,7 @@ const clearSessionAndRedirect = () => {
   localStorage.removeItem("bdms_hospital_id");
   localStorage.removeItem("bdms_hospital_name");
   localStorage.removeItem("bdms_role");
+  window.dispatchEvent(new Event("bdms:session-expired"));
   if (window.location.pathname !== "/login") {
     window.location.href = "/login";
   }
@@ -73,6 +75,16 @@ api.interceptors.response.use(
         await new Promise((resolve) => setTimeout(resolve, 400 * originalRequest._retryCount));
         return api(originalRequest);
       }
+    }
+
+    if (isNetworkError) {
+      toast.error("Network/CORS issue: backend is unreachable or blocked by CORS policy");
+      return Promise.reject(error);
+    }
+
+    if (status === 403) {
+      toast.error("Forbidden: you do not have permission for this action");
+      return Promise.reject(error);
     }
 
     if (error.response?.status === 401 && !originalRequest?._retry) {

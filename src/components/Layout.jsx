@@ -1,13 +1,26 @@
 import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
 import Breadcrumbs from "./Breadcrumbs";
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
+import { useNotificationStore } from "../store/notificationStore";
 
 function Layout() {
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
+  const connectRealtime = useNotificationStore((state) => state.connectRealtime);
+  const disconnectRealtime = useNotificationStore((state) => state.disconnectRealtime);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!token) return;
+    connectRealtime(token);
+    return () => {
+      disconnectRealtime();
+    };
+  }, [connectRealtime, disconnectRealtime, token]);
 
   return (
     <div className="min-h-screen bg-medical-bg dark:bg-slate-950 lg:flex">
@@ -29,6 +42,7 @@ function Layout() {
                 type="button"
                 className="btn-secondary px-4 py-2 text-sm"
                 onClick={() => {
+                  disconnectRealtime();
                   logout();
                   navigate("/login");
                 }}

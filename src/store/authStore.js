@@ -32,6 +32,13 @@ export const useAuthStore = create((set, get) => ({
     const { token, initialized } = get();
     if (initialized) return;
 
+    if (!window.__bdmsSessionExpiredListenerBound) {
+      window.addEventListener("bdms:session-expired", () => {
+        set({ token: null, refreshToken: null, user: null, initialized: true });
+      });
+      window.__bdmsSessionExpiredListenerBound = true;
+    }
+
     if (!token) {
       set({ initialized: true });
       return;

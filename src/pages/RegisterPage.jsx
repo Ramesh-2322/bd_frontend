@@ -14,9 +14,12 @@ function RegisterPage() {
     fullName: "",
     email: "",
     password: "",
+    role: "DONOR",
     bloodGroup: "",
     location: "",
     phone: "",
+    hospitalId: "",
+    hospitalName: "",
   });
   const [errors, setErrors] = useState({});
 
@@ -26,9 +29,12 @@ function RegisterPage() {
     if (!formData.fullName.trim()) nextErrors.fullName = "Full name is required";
     if (!/^\S+@\S+\.\S+$/.test(formData.email)) nextErrors.email = "Valid email required";
     if (formData.password.length < 8) nextErrors.password = "Password must be at least 8 characters";
-    if (!formData.bloodGroup) nextErrors.bloodGroup = "Select blood group";
+    if (formData.role === "DONOR" && !formData.bloodGroup) nextErrors.bloodGroup = "Select blood group";
     if (!formData.location.trim()) nextErrors.location = "Location is required";
     if (!/^\d{10,15}$/.test(formData.phone)) nextErrors.phone = "Phone must be 10-15 digits";
+    if (formData.role === "HOSPITAL" && !formData.hospitalName.trim()) {
+      nextErrors.hospitalName = "Hospital name is required";
+    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -44,12 +50,17 @@ function RegisterPage() {
       name: formData.fullName.trim(),
       email: formData.email.trim(),
       password: formData.password,
-      bloodGroup: formData.bloodGroup,
+      bloodGroup: formData.role === "DONOR" ? formData.bloodGroup : undefined,
       location: formData.location.trim(),
       phoneNumber: formData.phone.trim(),
-      availabilityStatus: true,
-      role: "DONOR",
-      ...(defaultHospitalId ? { hospitalId: Number(defaultHospitalId) } : {}),
+      availabilityStatus: formData.role === "DONOR",
+      role: formData.role,
+      hospitalName: formData.hospitalName?.trim() || undefined,
+      ...(formData.hospitalId
+        ? { hospitalId: Number(formData.hospitalId) }
+        : defaultHospitalId
+          ? { hospitalId: Number(defaultHospitalId) }
+          : {}),
     };
 
     const ok = await register(payload);
@@ -61,8 +72,8 @@ function RegisterPage() {
   return (
     <main className="grid min-h-screen place-content-center bg-hero-glow px-4 py-8">
       <section className="card w-full max-w-2xl p-8">
-        <h1 className="text-2xl font-bold text-medical-900">Create Donor Account</h1>
-        <p className="mt-2 text-sm text-slate-600">Join the verified blood donor network.</p>
+        <h1 className="text-2xl font-bold text-medical-900">Create BDMS Account</h1>
+        <p className="mt-2 text-sm text-slate-600">Register as donor, admin, or hospital staff.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 grid gap-4 sm:grid-cols-2" noValidate>
           <div className="sm:col-span-2">
@@ -99,10 +110,24 @@ function RegisterPage() {
           </div>
 
           <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
+            <select
+              className="input"
+              value={formData.role}
+              onChange={(event) => setFormData((prev) => ({ ...prev, role: event.target.value }))}
+            >
+              <option value="DONOR">Donor</option>
+              <option value="ADMIN">Admin</option>
+              <option value="HOSPITAL">Hospital</option>
+            </select>
+          </div>
+
+          <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Blood Group</label>
             <select
               className="input"
               value={formData.bloodGroup}
+              disabled={formData.role !== "DONOR"}
               onChange={(event) => setFormData((prev) => ({ ...prev, bloodGroup: event.target.value }))}
             >
               <option value="">Select group</option>
@@ -114,6 +139,29 @@ function RegisterPage() {
             </select>
             {errors.bloodGroup && <p className="mt-1 text-xs text-medical-700">{errors.bloodGroup}</p>}
           </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Hospital ID (optional)</label>
+            <input
+              className="input"
+              value={formData.hospitalId}
+              onChange={(event) => setFormData((prev) => ({ ...prev, hospitalId: event.target.value }))}
+              placeholder="e.g. 101"
+            />
+          </div>
+
+          {formData.role === "HOSPITAL" && (
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-slate-700">Hospital Name</label>
+              <input
+                className="input"
+                value={formData.hospitalName}
+                onChange={(event) => setFormData((prev) => ({ ...prev, hospitalName: event.target.value }))}
+                placeholder="Enter hospital name"
+              />
+              {errors.hospitalName && <p className="mt-1 text-xs text-medical-700">{errors.hospitalName}</p>}
+            </div>
+          )}
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Location</label>
