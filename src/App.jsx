@@ -14,8 +14,7 @@ function App() {
     initializeAuth();
   }, [initializeAuth]);
 
-  const publicPaths = ["/login", "/register"];
-  const showNavbar = publicPaths.includes(location.pathname);
+  const showNavbar = false;
 
   return (
     <div className="min-h-screen bg-medical-bg text-medical-text">

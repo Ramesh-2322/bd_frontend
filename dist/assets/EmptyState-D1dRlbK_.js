@@ -1,1 +1,0 @@
-import{j as t}from"./index-H-Ompc6K.js";function x({title:e,description:s}){return t.jsxs("div",{className:"card px-6 py-10 text-center",children:[t.jsx("h3",{className:"text-lg font-semibold text-slate-800",children:e}),t.jsx("p",{className:"mt-2 text-sm text-slate-500",children:s})]})}export{x as E};

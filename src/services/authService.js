@@ -10,14 +10,54 @@ const normalizeAuthPayload = (data) => ({
 
 const profileEndpoints = ["/auth/me", "/users/me", "/donors/me", "/profile"];
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isTransientError = (error) => {
+  const status = error.response?.status;
+  const code = error.code || "";
+  const message = (error.message || "").toLowerCase();
+  return (
+    !status ||
+    status >= 500 ||
+    code === "ECONNABORTED" ||
+    message.includes("timeout") ||
+    message.includes("network")
+  );
+};
+
+const withTransientRetry = async (operation, maxAttempts = 2) => {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const retryable = isTransientError(error);
+      if (!retryable || attempt >= maxAttempts) {
+        throw error;
+      }
+      await sleep(500 * attempt);
+    }
+  }
+
+  throw lastError;
+};
+
 export const authService = {
   async login(payload) {
-    const { data } = await api.post("/auth/login", payload);
+    const { data } = await withTransientRetry(
+      () => api.post("/auth/login", payload, { timeout: 60000 }),
+      2
+    );
     return normalizeAuthPayload(unwrapApiResponse(data));
   },
 
   async register(payload) {
-    const { data } = await api.post("/auth/register", payload);
+    const { data } = await withTransientRetry(
+      () => api.post("/auth/register", payload, { timeout: 60000 }),
+      2
+    );
     return normalizeAuthPayload(unwrapApiResponse(data));
   },
 
@@ -26,7 +66,7 @@ export const authService = {
 
     for (const endpoint of profileEndpoints) {
       try {
-        const { data } = await api.get(endpoint);
+        const { data } = await withTransientRetry(() => api.get(endpoint, { timeout: 20000 }), 2);
         return unwrapApiResponse(data);
       } catch (error) {
         const status = error.response?.status;
